@@ -1,0 +1,68 @@
+{
+  "dag_id": "enhanced_sql_dependency_pipeline",
+  "default_args": {
+    "owner": "data_engineering",
+    "depends_on_past": false,
+    "email_on_failure": true,
+    "email_on_retry": false,
+    "retries": 1,
+    "retry_delay": 300
+  },
+  "description": "Execute SQL scripts based on file and SQL dependencies with real-time dependency resolution",
+  "schedule_interval": null,
+  "start_date": "2025-01-01T00:00:00",
+  "catchup": false,
+  "tags": ["databricks", "dependency", "dynamic"],
+  
+  "tasks": [
+    {
+      "task_id": "check_new_files",
+      "operator": "airflow.operators.python.PythonOperator",
+      "python_callable_file": "/path/to/dependency_functions.py",
+      "python_callable_name": "check_new_files",
+      "provide_context": true
+    },
+    {
+      "task_id": "initialize_dependency_graph",
+      "operator": "airflow.operators.python.PythonOperator",
+      "python_callable_file": "/path/to/dependency_functions.py",
+      "python_callable_name": "initialize_dependency_graph",
+      "provide_context": true,
+      "upstream_task_ids": ["check_new_files"]
+    },
+    {
+      "task_id": "identify_ready_scripts",
+      "operator": "airflow.operators.python.PythonOperator",
+      "python_callable_file": "/path/to/dependency_functions.py",
+      "python_callable_name": "identify_ready_scripts",
+      "provide_context": true,
+      "upstream_task_ids": ["initialize_dependency_graph"]
+    },
+    {
+      "task_id": "execute_and_monitor",
+      "operator": "airflow.operators.python.PythonOperator",
+      "python_callable_file": "/path/to/dependency_functions.py",
+      "python_callable_name": "execute_and_monitor_scripts",
+      "provide_context": true,
+      "upstream_task_ids": ["identify_ready_scripts"]
+    },
+    {
+      "task_id": "trigger_for_new_scripts",
+      "operator": "airflow.operators.trigger_dagrun.TriggerDagRunOperator",
+      "trigger_dag_id": "enhanced_sql_dependency_pipeline",
+      "reset_dag_run": true,
+      "wait_for_completion": true,
+      "poke_interval": 30,
+      "trigger_rule": "none_failed_min_one_success",
+      "upstream_task_ids": ["execute_and_monitor"]
+    },
+    {
+      "task_id": "check_all_complete",
+      "operator": "airflow.operators.python.PythonOperator",
+      "python_callable_file": "/path/to/dependency_functions.py",
+      "python_callable_name": "check_all_complete",
+      "provide_context": true,
+      "upstream_task_ids": ["trigger_for_new_scripts"]
+    }
+  ]
+}
