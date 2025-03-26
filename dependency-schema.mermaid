@@ -1,0 +1,38 @@
+flowchart TB
+    subgraph External ["External Systems"]
+        DataSources["Data Sources"]
+    end
+    
+    subgraph Storage ["Azure Storage"]
+        InputFolder["Input Folder"]
+    end
+    
+    subgraph AirflowOrchestration ["Apache Airflow"]
+        FileMonitor["File Monitor Sensor"]
+        DependencyChecker["Dependency Checker"]
+        TaskGenerator["Dynamic Task Generator"]
+        DatabricksOperators["Databricks SQL Operators"]
+    end
+    
+    subgraph Databricks ["Azure Databricks"]
+        SparkCluster["Spark Cluster"]
+        SQLExecution["SQL Execution Engine"]
+        MetadataDB["Metadata Database"]
+    end
+    
+    subgraph StatusDB ["Status Database"]
+        MetadataTable["SQL Metadata Table"]
+        ExecutionHistory["Execution History Table"]
+    end
+
+    DataSources -->|Produce Data Files| InputFolder
+    InputFolder -->|Trigger| FileMonitor
+    FileMonitor -->|New Files| DependencyChecker
+    DependencyChecker -->|Read| MetadataTable
+    DependencyChecker -->|Check Status| ExecutionHistory
+    DependencyChecker -->|Executable Scripts| TaskGenerator
+    TaskGenerator -->|Create Tasks| DatabricksOperators
+    DatabricksOperators -->|Submit Job| SparkCluster
+    SparkCluster -->|Execute| SQLExecution
+    SQLExecution -->|Update Status| MetadataTable
+    SQLExecution -->|Log Execution| ExecutionHistory
